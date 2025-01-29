@@ -1,9 +1,18 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
-  appName: 'eval',
-  webDir: 'www'
+  appId: 'com.messageapp.app',
+  appName: 'Message App',
+  webDir: 'www',
+  bundledWebRuntime: false,
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,
+      backgroundColor: "#ffffffff",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP"
+    }
+  }
 };
 
 export default config;

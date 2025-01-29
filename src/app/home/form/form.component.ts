@@ -1,0 +1,143 @@
+import { Component, ViewChild, ElementRef } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { IonicModule, ToastController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
+import { DatabaseService, MessageData } from '../../services/database.service';
+import { EmailService } from '../../services/email.service';
+
+@Component({
+  selector: 'app-form',
+  templateUrl: './form.component.html',
+  styleUrls: ['./form.component.scss'],
+  standalone: true,
+  imports: [CommonModule, IonicModule, ReactiveFormsModule]
+})
+export class FormComponent {
+  @ViewChild('fileInput') fileInput!: ElementRef;
+  
+  form: FormGroup = this.formBuilder.group({
+    name: ['', Validators.required],
+    email: ['', [Validators.required, Validators.email]],
+    category: ['', Validators.required],
+    message: ['', Validators.required]
+  });
+  
+  submitted = false;
+  showHistory = false;
+  selectedFile: File | null = null;
+  messages$ = this.databaseService.messages$;
+  selectedMessage: MessageData | null = null;
+
+  constructor(
+    private formBuilder: FormBuilder,
+    private databaseService: DatabaseService,
+    private emailService: EmailService,
+    private toastController: ToastController
+  ) {}
+
+  private resetForm() {
+    this.form.reset();
+    this.submitted = false;
+    this.selectedFile = null;
+    if (this.fileInput) {
+      this.fileInput.nativeElement.value = '';
+    }
+  }
+
+  async onSubmit() {
+    this.submitted = true;
+
+    if (this.form.valid) {
+      const messageData: MessageData = {
+        name: this.form.value.name,
+        email: this.form.value.email,
+        category: this.form.value.category,
+        message: this.form.value.message,
+        attachment: this.selectedFile?.name,
+        timestamp: Date.now()
+      };
+
+      try {
+        const dbSuccess = await this.databaseService.saveMessage(messageData);
+        
+        if (!dbSuccess) {
+          return;
+        }
+
+        try {
+          await this.emailService.sendEmail(messageData);
+          await this.showToast('Message envoyé avec succès !', 'success');
+          this.resetForm();
+          this.showHistory = true;
+        } catch {
+          this.resetForm();
+          this.showHistory = true;
+        }
+      } catch {
+        this.resetForm();
+      }
+    } else {
+      this.resetForm();
+    }
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+      this.showToast(`Fichier sélectionné : ${file.name}`, 'success');
+    }
+  }
+
+  showHistoryModal() {
+    this.showHistory = true;
+  }
+
+  closeHistory() {
+    this.showHistory = false;
+  }
+
+  showMessageDetail(message: MessageData) {
+    this.selectedMessage = message;
+    this.showHistory = false;
+  }
+
+  closeMessageDetail() {
+    this.selectedMessage = null;
+    this.showHistory = true;
+  }
+
+  getCategoryColor(category: string): string {
+    switch (category.toLowerCase()) {
+      case 'question':
+        return 'primary';
+      case 'suggestion':
+        return 'success';
+      case 'probleme':
+        return 'danger';
+      default:
+        return 'medium';
+    }
+  }
+
+  private async showToast(message: string, color: 'success' | 'danger' | 'warning') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color,
+      position: 'top',
+      buttons: [
+        {
+          text: 'OK',
+          role: 'cancel'
+        }
+      ]
+    });
+    await toast.present();
+  }
+
+  get f() {
+    return this.form.controls;
+  }
+}
