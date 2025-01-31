@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { DatabaseService, MessageData } from '../../services/database.service';
 import { EmailService } from '../../services/email.service';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 @Component({
   selector: 'app-form',
@@ -26,6 +27,7 @@ export class FormComponent {
   submitted = false;
   showHistory = false;
   selectedFile: File | null = null;
+  selectedPhoto: string | null = null;
   messages$ = this.databaseService.messages$;
   selectedMessage: MessageData | null = null;
 
@@ -40,6 +42,7 @@ export class FormComponent {
     this.form.reset();
     this.submitted = false;
     this.selectedFile = null;
+    this.selectedPhoto = null;
     if (this.fileInput) {
       this.fileInput.nativeElement.value = '';
     }
@@ -87,6 +90,39 @@ export class FormComponent {
     if (file) {
       this.selectedFile = file;
       this.showToast(`Fichier sélectionné : ${file.name}`, 'success');
+    }
+  }
+
+  async takePhoto() {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera
+      });
+
+      if (image.base64String) {
+        this.selectedPhoto = image.base64String;
+        // Convertir l'image base64 en File
+        const byteCharacters = atob(image.base64String);
+        const byteArrays = [];
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+          const slice = byteCharacters.slice(offset, offset + 512);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+        this.selectedFile = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+        this.showToast('Photo prise avec succès !', 'success');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la prise de photo:', error);
+      this.showToast('Erreur lors de la prise de photo', 'danger');
     }
   }
 

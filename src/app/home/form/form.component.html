@@ -51,6 +51,17 @@
         <span *ngIf="selectedFile" class="selected-file">{{ selectedFile.name }}</span>
       </div>
     </ion-item>
+
+    <ion-item>
+      <ion-label position="floating">Photo</ion-label>
+      <div class="file-input-container">
+        <ion-button fill="outline" size="small" (click)="takePhoto()">
+          <ion-icon name="camera-outline" slot="start"></ion-icon>
+          Prendre une photo
+        </ion-button>
+        <span *ngIf="selectedPhoto" class="selected-file">Photo prise</span>
+      </div>
+    </ion-item>
   </ion-list>
 
   <ion-grid>
